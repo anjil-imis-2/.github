@@ -169,7 +169,7 @@ The three value-added modules are:
 
 ## 3. **Faecal Sludge Information Management System (FSIMS)**
 
-<p align="justify">The FSIMS is another core and most important module CWIS. This module enables municipality to digitalize and manage all data related to sanitation systems and services. FSIMS digitalize the complete sanitation service chain from application request for emptying service to the safe disposal of faecal sludge at the treatment plant and the reuse of the treated waste.</p>
+<p align="justify">The FSIMS is a core module supporting Citywide Inclusive Sanitation (CWIS). This application integrates scheduled and on-demand desludging with building, containment, service provider and treatment plant information. The customization adds <b>Scheduled Desludging</b> and <b>Scheduled Desludging Reintegration</b> to the existing application, emptying, sludge collection/disposal and feedback workflow. It does not include a Supervisory Assessment module, role, permission group or service-delivery stage.</p>
 
 <p align="justify">The FSIMS is further categorized into five sub-modules:</p> 
 
@@ -185,17 +185,32 @@ The three value-added modules are:
 
 <p align="justify">The information maintained by TPIMS along the information maintained by BIMS and the ESIMS, helps municipal to monitor the CWIS indicators such as (i) FS treatment capacity as a % of total FS generated from non-sewered connections, (ii) FS treatment capacity as a % of volume disposed at the treatment plant, (iii) WW treatment capacity as a % of total WW generated from sewered connections and greywater and supernatant generated from non-sewered connections, and (iv) Effectiveness of FS treatment in meeting prescribed standards for effluent discharge.</p>
 
-<p align="justify">e. Emptying Service Information Management System (ESIMS): The Emptying Service IMS digitalizes the sanitation service chain and enables the city to manage the entire sanitation service chain, starting from application requests for emptying service from the customer to the safe disposal of feacal sludge at the treatment plant. All the activities involved in this process can be monitored in real-time through ESIMS. The module is divided into four categories according to the different stages of the sanitation service chain i.e. application, emptying, sludge collection and feedback. The complete service chain is managed and maintained through the application section; however, the individual sections maintain further detailed information. There are several functional modules under this sub-module: 
+<p align="justify">e. Emptying Service Information Management System (ESIMS): ESIMS links each service application directly to emptying, sludge collection/disposal and customer feedback. Scheduled desludging identifies containments due for service, while reintegration allows a customer who previously declined the scheduled service to return to the same application workflow. The following functions operate within FSIMS:</p>
 
-- <p align="justify">Application – this functional module is accessible to helpdesk and FSTP operator. The helpdesk use it for receiving and maintaining application for customer's emptying request and collecting and maintain feedback data. FSTP operator use it for updating sludge transferred from the emptied containment and disposed in the FSTP. There is a function to generate report of emptying service under this functional module. Helpdesks generally are the part of the municipality's sanitation department, emptier are part of the service providers and FSTP operators can be part of the municipality or the private operator as of municipality's policy.</p>
+- <p align="justify"><b>Scheduled Desludging</b> – An authorized user regenerates the schedule. In one database transaction, IMIS recalculates containment priorities, allocates proposed working dates according to configured capacity, rebuilds a temporary schedule, assigns uncovered wards to eligible providers where necessary and associates each scheduled building with an operational provider covering its ward. Provider-linked users see only their provider's scheduled records.</p>
 
-- <p align="justify"> Emptying – there is an easy-to-use native mobile application (android) that allows collection of the emptying information while providing the emptying service, such information can be updated in real-time. The mobile application is used by emptier to collect the information such as emptying start and end time, number of trips, total cost for emptying, and the payment receipt number. Emptying details can be viewed in real-time by help desk and other municipal staff who has access to this module.</p>
+- <p align="justify"><b>Scheduled Desludging Reintegration</b> – Selecting “disagree” removes the record from the active schedule and sets the containment status to 4. The reintegration list shows these opted-out containments. When the citizen later agrees, an authorized user confirms the record; IMIS resolves an operational provider from the building ward and sends the selected building and containment through the same application-creation path used by scheduled confirmation.</p>
 
-- <p align="justify">Sludge collection – FSTP operator in FSTP updates the FS disposal record that includes date, time and volume of waste disposed in the FSTP through the functional module Application through the web app as the waste is transferred and disposed in FSTP. Help desk can view these records in real-time through this functional module.</p>
+- <p align="justify"><b>Application</b> – Scheduled confirmation stores the selected building, containment, road, provider and proposed emptying date on the server and opens the existing application form. Application creation rejects a containment that already has an unfinished application. A successful scheduled or reintegration confirmation marks the containment as confirmed, removes its temporary schedule row and creates the linked application. On-demand requests continue to enter through the existing application workflow.</p>
 
-- Feedback – this functional module is accessible to the helpdesk, after completing sanitation service chain from emptying to disposal of the waste in the FSTP. 
-- Help desks – this functional module is used to create help desk and update their information. Help desk generally are under municipality itself, but the system has capability of managing multiple help desks.</p>
+- <p align="justify"><b>Emptying</b> – The Service Provider Emptying Operator retrieves open applications for the operator's service provider through the protected mobile API and records the service, vehicle, workers, sludge volume, trips, payment and images. Saving an emptying marks the application as emptied and updates the containment's last emptying date, next emptying date and emptied status.</p>
 
+- <p align="justify"><b>Sludge Collection</b> – The Treatment Plant Admin records the sludge received at the treatment plant, including the linked application, service provider, vehicle, volume, trips and entry/exit details. Saving the record marks the application's sludge collection status as complete.</p>
+
+- <p align="justify"><b>Feedback</b> – After emptying, a user with the relevant feedback permission records the citizen's service-quality and PPE feedback against the application. Saving the record marks the application's feedback status as complete and supports service quality monitoring and provider KPIs.</p>
+
+- <p align="justify"><b>Help Desks</b> – Municipality and Service Provider Help Desk roles support schedule handling, reintegration, application processing and customer follow-up according to their assigned permissions.</p>
+
+<p align="justify"><b>Reference design compared with the implemented scheduling logic:</b> The supplied DNCC reference material describes selecting eligible on-site containments outside the WASA sewer service and billing population, assigning priority, grouping by provider service area, ordering by distance to a treatment facility and confirming service with the customer. It also includes a supervisory assessment stage and related notifications. This application implements the scheduling and reintegration functions but intentionally omits that assessment stage and its notifications. The source code implements the following verified rules:</p>
+
+1. <b>Eligibility:</b> Priority recalculation applies to non-deleted containments whose status is unset, active (0) or opted out (4). Automatic date allocation is narrower: the containment must be non-deleted, not previously emptied and have an unset or active status. The temporary display queue uses linked building and containment records with status unset, active (0) or scheduled (3), and excludes any containment with an unfinished application. The temporary queue intentionally does not apply the <code>emptied_status</code> filter used by date allocation. The current queries do not explicitly enforce the WASA sewer-service or sewer-billing exclusions described in the reference design.
+2. <b>Priority assignment:</b> IMIS uses the last valid emptying date first and falls back to a valid containment construction date. Future dates are ignored. No usable date or a date older than three years receives priority 1; a date from exactly three years ago up to but not including one year ago receives priority 2; and a date from exactly one year ago through today receives priority 3.
+3. <b>Date allocation:</b> Regeneration calls the date-allocation routine. It starts from the configured schedule start date, or from today plus the configured regeneration period when the saved start date has passed. It skips configured weekends and holidays, subtracts already confirmed and automatically allocated bookings from the daily trip capacity, and assigns remaining slots in priority, FSTP-distance and containment-ID order.
+4. <b>Displayed sequence:</b> After date allocation, IMIS rebuilds <code>fsm.desludging_schedule_temp</code>. The sequence shown in that temporary queue is ordered by FSTP distance first, priority second and containment ID third. This differs from the reference design's priority-first description and from the priority-first order used for date allocation.
+5. <b>Service-area grouping:</b> Existing service areas are preserved. Municipality wards not covered by any operational provider may be distributed randomly and evenly only among operational providers that have no service area. Each temporary schedule row is then assigned to the first active provider, by provider ID, whose service-area CSV or service-provider ward mapping contains the building ward. Rows without a matching provider remain unassigned.
+6. <b>Customer confirmation:</b> The Service Provider Admin or an authorized Help Desk user contacts the citizen. Accepting a scheduled record opens the application form with the schedule selection; declining it sets containment status 4 and removes the temporary row. Application creation checks for an unfinished application, then marks a confirmed containment with status 1 and removes the temporary schedule record.
+7. <b>Reintegration:</b> Reintegration lists status-4 containments. Municipality-wide administrative/help-desk users can view all providers, while provider-linked users are limited to wards covered by their provider. Confirming reintegration resolves the active provider for the current building ward and returns the record to the same application path. If no active provider covers the ward, confirmation stops with an error.
+8. <b>Downstream service tracking:</b> The application remains the common record linking emptying, sludge collection and feedback. The implementation has no separate supervisory assessment entity, controller, role, permission group, status transition or notification stage.
 <p align="justify">Data maintained by FSIMS along with the building data and LIC data enables CWIS Information Management System to generate CWIS indicators such as (i) IHHL onsite sanitation system that have been desludged, (ii) Collected FS disposed at the treatment plant or designated disposal site, (iii) Low income onsite sanitation systems that have been desludged, (iv) FS collected from LIC that is disposed at treatment plant or designated area, (v) Educational institutions where FS generated is safely transported to TP or safely disposed in situ, (vi) Healthcare facilities where FS generated is safely transported to TP or safely disposed in situ, and (vii) Desludging services completed mechanically or semi-mechanically.</p>
 
 <p align="justify">The data export tools under FSIMS allow users to export data in CSV, Shape and KML format where applicable.</p>
@@ -305,9 +320,7 @@ Map Feature:
 
 ## 3.2 <a name="_toc189741405"></a>**Roles and Permissions**
 
-   <a name="_hlk189691742"></a> <p align="justify">The IMIS is equipped with pre-defined roles and permissions within the system that govern the extent to which the modules and their functionalities can be accessed. This role-based approach ensures visibility of modules, tools and features according to the responsibilities assigned to the role. The pre-defined roles can be easily updated and modified as per the requirements of the city through the Settings section of IMIS, and new roles beyond the pre-defined ones can be added as well.</p>
-
-   <p align="justify">The pre-defined roles are categorized according to the type of user. The IMIS has been developed with 5 different types of users and 17 pre-defined roles categorized within the user types:</p>
+   <a name="_hlk189691742"></a> <p align="justify">IMIS uses predefined roles and Spatie permissions to control access to modules, records and actions. The roles can be maintained through Settings, but the responsibilities below reflect the roles and permissions seeded by this application. The role seeder defines 18 distinct role names, including the platform-level Super Admin. No Supervisory Assessment role or permission group is defined.</p>
 
 1. Municipality
    -  Municipality - Super Admin
@@ -323,91 +336,103 @@ Map Feature:
    -  Municipality - Public Health Department
    -  Municipality - Help Desk
 1. Service Provider
-   -  Service Provider – Admin
+   -  Service Provider - Admin
    -  Service Provider - Emptying Operator
-   -  Service Provider - Help Desk	
+   -  Service Provider - Help Desk
 1. Treatment Plant
    -  Treatment Plant - Admin
 1. Help Desk
    -  Municipality - Help Desk
-   -  Service Provider - Help Desk	
+   -  Service Provider - Help Desk
 1. Guest
    -  Guest
 
-For detailed role and permission setup, refer to the [Roles & Permission Matrix](https://github.com/base-imis/web_app/blob/master/documentations/code_documents/18%20-%20Roles%20%26%20Permission%20Matrix.md). 
+<p align="justify"><b>Platform administration:</b> Super Admin is a separate platform role in addition to the roles grouped above. The Help Desk category repeats the two help-desk roles already listed under Municipality and Service Provider; it does not create additional role names. Actual access is determined by the permissions assigned to the account.</p>
+
+<p align="justify"><b>Scheduled desludging and service-chain responsibilities:</b></p>
+
+- <b>Service Provider - Admin:</b> Receives the complete Schedule Desludging and Schedule Reintegration permission groups. The role can list, regenerate, confirm or remove scheduled records through the implemented schedule controller and can confirm opted-out records through reintegration. Schedule data is restricted to the user's <code>service_provider_id</code>. The seeder also grants management access for provider help desks, vehicles, employees and users, while application/emptying access is primarily view, list and export and sludge-collection/feedback access is view and list.
+- <b>Service Provider - Help Desk:</b> Receives the complete Schedule Desludging and Schedule Reintegration permission groups, application and feedback permissions except history, and view/list/export access to emptying and sludge collection. This role can support customer confirmation, application processing, reintegration and feedback follow-up for the provider.
+- <b>Municipality - Help Desk:</b> Receives the complete Schedule Desludging and Schedule Reintegration permission groups, application and feedback permissions except history, and view/list/export access to emptying, sludge collection and service-provider records. The reintegration controller allows this role to view records across providers.
+- <b>Service Provider - Emptying Operator:</b> Receives <code>Access Emptying Service API</code>. Through the authenticated mobile API, the operator retrieves open applications limited to the operator's service provider, selects the provider's vehicles and workers, and submits emptying details. The API updates the linked application and containment when the service is saved.
+- <b>Treatment Plant - Admin:</b> Receives sludge-collection permissions except history, along with treatment-plant and treatment-efficiency access. The sludge-collection controller limits this role's list to its assigned treatment plant. The role records received sludge and completes the sludge-collection status for the linked application.
+- <b>Municipality - Sanitation Department:</b> Receives list access to Schedule Reintegration, operational view/list/export permissions for applications, emptying, sludge collection and feedback, treatment-plant functions, dashboards, KPI/CWIS functions and related reporting. The seeder does not grant this role schedule regeneration or confirmation.
+- <b>Municipality - Super Admin and Super Admin:</b> Provide broader administrative oversight according to their seeded permissions. The reintegration controller treats these roles as municipality-wide viewers.
+- <b>Municipality - Executive and Guest:</b> Use the dashboards, records and reports made available by their respective seeders; neither role is assigned responsibility for performing the scheduled workflow solely by its role name.
+
+<p align="justify"><b>Implemented permission checks:</b> The permission catalogue defines List, View, Regenerate, Confirm, Delete, Export, Reschedule and Filter permissions for Schedule Desludging, and List, View, Confirm, Edit, Delete, Export, Report and History permissions for Schedule Reintegration. The current schedule controller actively enforces List, Regenerate, Confirm and Delete; the current reintegration controller enforces List and Confirm. Catalogue entries without a corresponding controller action should not be interpreted as implemented functionality. General application, emptying, sludge-collection and feedback actions continue to use their existing permission checks.</p>
+
+For the Base IMIS role framework, refer to the [Roles & Permission Matrix](https://github.com/base-imis/web_app/blob/master/documentations/code_documents/18%20-%20Roles%20%26%20Permission%20Matrix.md). Application-specific assignments are defined in the local role and permission seeders and may be customized through Settings.
 ## 3.3 <a name="_toc189741406"></a>**IMIS Driven Sanitation Service Delivery Chain**
-<p align="justify">IMIS digitalizes the entire sanitation service delivery chain, enabling cities to efficiently manage each stage—from customer requests for emptying services to the safe disposal of fecal sludge at treatment plants. The sanitation service delivery model described below is currently implemented in IMIS. However, when deploying IMIS in new cities, customization may be required to align with the specific requirements and needs of the city. This component of IMIS—the sanitation service delivery model—is one of its strongest features, providing a comprehensive software solution that manages the entire service delivery chain. It offers a holistic approach to sanitation service management, ensuring efficiency, transparency, and accountability throughout the process. The IMIS-driven sanitation service chain, as currently implemented, is illustrated in [Figure 3](#figure-3).</p>
 
-
+<p align="justify">The supported IMIS-driven sanitation service chain begins with schedule generation and customer confirmation, continues through application registration and emptying, and finishes with sludge collection/disposal and customer feedback. Scheduled Desludging Reintegration returns a previously opted-out containment to the application path when the customer later agrees. On-demand requests enter through the existing application workflow and then use the same emptying, sludge collection and feedback records. [Figure 3](#figure3) shows the reference service workflow. Its supervisory assessment stage and notifications are not implemented in this application; the implemented process is described below.</p>
 
 <p align="center">
-    <img src="https://github.com/user-attachments/assets/8c8d4337-ca72-44e9-bcce-2bfc58881b4f" alt="IMIS driven sanitation service delivery chain">
+    <img src="assets/imis-sanitation-service-workflow.png" alt="IMIS service workflow connecting Citizen, Service Provider Admin, Emptying Operator, DWASA FSTP Operator and IMIS">
 </p>
 
 <p align="center">
     <a id="figure3"></a>
-    <em>Figure 3 IMIS driven sanitation service delivery chain</em>
+    <em>Figure 3 Reference IMIS sanitation service workflow</em>
 </p>
-
 
 ## 3.3.1 <a name="_toc189741407"></a>**Entities in IMIS-driven sanitation service delivery model** 
 
-There are six key entities in IMIS driven sanitation service model as discussed below: 
+<p align="justify">The workflow comprises four operational actors connected through IMIS, giving the five entities shown in Figure 3:</p>
 
-1. <p align="justify"><b>Customer</b> – The customer is the person who owns or resides in the building where the containment emptying service is required. Customer is responsible for requesting containment emptying service, receiving service, and paying a service fee to the service provider. Customer is also responsible for providing feedback, when contacted by help desk after the emptying service is completed. </p>
+1. <p align="justify"><b>Citizen</b> – The building owner, resident or recorded respondent confirms the proposed service schedule, provides access and customer information, pays the applicable charge and provides feedback after service.</p>
 
-1. <p align="justify"><b>Help desk (HD)</b> –The HD is a key interface between customers and the SP. It receives applications from customer for emptying containment, logs the application in IMIS and assigns work to SSP. The HD receives applications through a dedicated central hotline or in person at the HD office.</p> 
+2. <p align="justify"><b>Service Provider Admin and authorized Help Desk users</b> – Regenerate and review the schedule, contact customers, confirm or decline scheduled service, reintegrate opted-out records, open the linked application workflow, coordinate service-provider resources and record customer feedback according to assigned permissions.</p>
 
-   <p align="justify">The HD is also responsible for collecting feedback from the customers and supporting on other aspects of FSM such as collecting and redressal grievances, advising on septic tank designs, and providing information on trained masons and different other sanitation-specific inquiries. The HD can be a part of the sanitation section of the city established on its premises or it can be a part of the service providers themselves.</p>  
+3. <p align="justify"><b>Service Provider Emptying Operator</b> – Uses the protected emptying-service API to retrieve the provider's open applications, performs containment emptying, records the service details and transports collected sludge to the selected operational treatment plant.</p>
 
-1. <p align="justify"><b>Service Provider (SP)</b> – SP is responsible to take job orders from the help desk for emptying service, scheduling the service delivery date and time in consultation with the customer, and mobilize the ETO for emptying. SP must also maintain information about the emptying service provider, all human resources and infrastructure used in delivering services in IMIS.</p>
+4. <p align="justify"><b>Treatment Plant Admin</b> – Receives the transported sludge and records the linked application, vehicle, service provider, volume, trip count, treatment plant and entry/exit details. Access is scoped to the user's assigned treatment plant when listing records.</p>
 
-1. <p align="justify"><b>Emptying and Transport Operator (ETO)</b> – ETO is a team of driver and helpers and are a part of the service provider that are mobilized in the site for containment emptying. ETO is responsible for emptying containment, transporting and disposing collected FS in the FSTP designated by the city, collecting and updating information required after containment emptying through a mobile app provided for this purpose.</p>
-
-1. <p align="justify"><b>Fecal Sludge Treatment Plant Operator (FSTPO)</b> - FSTPO is a staff member of an entity operating the FSTPO. The FSTPO updates daily sludge collection details, and lab reports on treated effluents and co-composting in IMIS. </p>
-
-1. <p align="justify"><b>Sanitation Department</b> – Sanitation Department is responsible for overall monitoring and management of sanitation service using IMIS that includes monitoring of Help Desk, SSP, ETO, FSTPO; and generating reports and submitting them to concerned agencies and departments.</p>
+5. <p align="justify"><b>IMIS</b> – Connects building, containment, schedule, application, emptying, sludge collection and feedback records. It enforces the implemented permission checks, provider and treatment-plant scoping, duplicate open-application check and workflow status updates used for monitoring and reporting.</p>
 
 ## 3.3.2 <a name="_toc189741408"></a>**Processes in IMIS-driven sanitation service delivery model**
 
-<p align="justify"> There are eight key processes involved in the IMIS-driven sanitation service delivery model in Faridpur – a) Process Application, b) Process Work Order, c) Maintain Sludge Disposal Record, d) Feedback Record e) Maintain Co-Composting Sales Record f) Maintain Quality Testing Record g) Submit Reports and h) CWIS Indicators Reporting. </p>
+<p align="justify">The A–G process groups describe the workflow implemented by this application. Step numbers in the reference diagram do not correspond directly to these processes.</p>
 
 ### A. **Process Application**
 
-<p align="justify"><b>A1. Request for emptying service</b> -The Customer initiates the process by requesting emptying service to the HD through a help-line number or, in-person when their containment (septic tank/pit/ holding tank) requires emptying. Related information collected from the customer includes address of the building (Street Name/ Code, House Number/ BIN and ward number), applicant details (name, gender and contact information), application details (proposed emptying date and emergency desludging status). The HD assigns an appropriate registered service provider as well then submits the emptying application in IMIS which is automatically forwarded as a work order to the SSP, including the application registration code. </p>
+<p align="justify"><b>A1. Generate the schedule and confirm service</b> – An authorized Service Provider Admin or Help Desk user regenerates the scheduled-desludging list. IMIS recalculates priority, allocates working dates, rebuilds the temporary sequence and assigns providers by ward coverage. The user contacts the citizen to confirm the proposed service. If the citizen declines, the containment is removed from the active list and becomes available for Scheduled Desludging Reintegration.</p>
+
+<p align="justify"><b>A2. Lodge the application</b> – Accepting a scheduled or reintegration record opens the existing application form with the selected building, containment, road, provider and proposed date. IMIS rejects a second unfinished application for the same containment. After successful scheduled confirmation, it marks the containment as confirmed and removes the temporary schedule row. On-demand applications can also be registered through the existing application path.</p>
 
 ### B. **Process Work Order** 
 
-<p align="justify"><b>B1. Receiving work order</b> – The SSP receives auto generated work order in both the web and mobile application with application code and details. The SP calls the corresponding customer and confirms the emptying date, time, and updates application information in IMIS if required. IMIS automatically generates and forwards the application code and the customer's contact number to the ETO through the IMIS mobile application. </p>
+<p align="justify"><b>B1. Retrieve the assigned application</b> – The Service Provider Emptying Operator signs in through the protected mobile API and retrieves open applications. IMIS limits an Emptying Operator to applications assigned to the operator's service provider.</p>
 
-<p align="justify"><b>B2. Emptying process</b> – The ETO empties the containment and updates emptying details through the mobile app in IMIS. IMIS provides real time updates to both the SP and HD on the information submitted through the field. In case of multiple trips required, the ETO updates emptying details after completion of all trips and the FSTP operator get notified about the forthcoming arrival of the vacutug after emptying the first trip.     </p>
+<p align="justify"><b>B2. Provide emptying and update the record</b> – The operator performs the service and records the linked application, vehicle, driver/emptiers, treatment plant, sludge volume, trips, payment information and required images. Saving the emptying sets the application's emptying status to complete and updates the containment's last and next emptying dates and emptied status.</p>
 
 ### C. **Maintain Sludge Disposal Record** 
 
-<p align="justify"><b>C1. Sludge disposal record</b> – The FSTPO logs records of information of sludge disposal at the FSTP in IMIS. Information such as vehicle number, vehicle capacity, arrival time, treatment plant ID where the sludge is disposed are collected in IMIS. IMIS provides real time updates to the SP and the HD about the completion of sludge disposal work. </p>
+<p align="justify"><b>C1. Transport sludge to the treatment plant</b> – The Emptying Operator transports the collected sludge to the selected operational FSTP or co-treatment plant.</p>
+
+<p align="justify"><b>C2. Record sludge collection details</b> – The Treatment Plant Admin records receipt of the sludge against the application and operational records. Saving the entry marks the application's sludge collection status as complete.</p>
 
 ### D. **Maintain Feedback Record** 
 
-<p align="justify"><b>D1. Feedback record</b> – After receiving the emptying service completion message in IMIS from ETO and FSTPO, the help desk calls customer for collecting feedback about the emptying service. Collected feedback are updated in IMIS. </p>
+<p align="justify"><b>D1. Collect and record feedback</b> – The Service Provider Admin or an authorized Help Desk user contacts the citizen after emptying, then records service-quality, PPE and comment information against the application. Saving the record marks the application's feedback status as complete and makes the data available for customer-satisfaction monitoring and KPIs.</p>
 
 ### E. **Maintain Quality Testing Record**   
 
-<p align="justify"><b>E1. Effluent test record</b> - The FSTPO periodically collects a sample of the final effluent and performs a treatment efficiency test with help of a lab. The FSTPO updates the effluent test report in IMIS. The original lab report is sent to the Sanitation Unit. This enables the Sanitation Unit to monitor the quality of effluent to assess the treatment effectiveness of the FSTP through IMIS. </p>
+<p align="justify"><b>E1. Effluent test record</b> – Authorized treatment-plant staff maintain treatment-efficiency standards and available test results through the treatment-plant functions. This is a supporting monitoring function outside the service sequence described above.</p>
 
 ### F. **Submit Reports** 
 
-<p align="justify"><b>F1. Sanitation Services report</b> – The sanitation unit generates the monthly report of the sanitation services provided directly through IMIS and submits to the appropriate authorities and departments as needed. </p>
+<p align="justify"><b>F1. Sanitation service information</b> – Authorized users review application progress across emptying, sludge collection and feedback and use available filters, exports and reports for operational monitoring.</p>
 
-<p align="justify"><b>F2. KPI report</b> – The sanitation unit generates the yearly KPI report directly through IMIS and submits to the appropriate authorities and departments as needed. </p>
+<p align="justify"><b>F2. KPI report</b> – Authorized users generate provider KPIs from recorded application, emptying, sludge collection and feedback data using the existing KPI functions.</p>
 
-<p align="justify"><b>F3. Application report</b> – The sanitation unit generates the individual application report directly through IMIS and submits to the appropriate authorities and departments as needed. </p>
+<p align="justify"><b>F3. Application and service records</b> – Linked application, emptying, sludge collection, feedback, receipt, history and export information supports follow-up and review according to permissions.</p>
 
-<p align="justify"><b>F4. FSTP operation report</b> – The sanitation unit generates a monthly metrics on FSTP operation information (records of sludge disposal and information on drying beds use for sludge disposal) directly through IMIS and submits to the appropriate agencies and department as needed.   
+<p align="justify"><b>F4. Treatment plant information</b> – Recorded sludge receipts, treatment-plant information and available treatment-efficiency results support disposal and treatment monitoring.</p>
 
 ### G. **CWIS indicators**   
 
-<p align="justify"><b>G1. Generate CWIS indicators</b> – The sanitation unit generates yearly CWIS indicators of the city and submits to concerned agencies and departments at the end of the year. However, authorised users with access to IMIS can view these records on the CWIS indicators dashboard or generate them as needed. </p>
-
+<p align="justify"><b>G1. Generate CWIS indicators</b> – Authorized users generate and review citywide sanitation indicators through the existing CWIS functions. Building, containment, emptying and sludge-collection data support these indicators; scheduled desludging and reintegration improve the operational records used for planning and monitoring.</p>
 ## 3.4 <a name="_toc189741409"></a>**Technical Stack**
    <p align="justify">IMIS is developed with a PHP backend utilizing the Laravel framework to manage core business logic, API development, and database interactions. The frontend is built using HTML5, CSS3, and JavaScript (ES6+) to create dynamic UI components and a responsive user interface. Bootstrap is integrated to ensure responsiveness across various devices. IMIS uses PostgreSQL as its relational database, enhanced with the PostGIS extension for spatial data processing, which is essential for the platform's spatial visualization and analysis tools.</p>
 
