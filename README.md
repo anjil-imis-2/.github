@@ -169,7 +169,7 @@ The three value-added modules are:
 
 ## 3. **Faecal Sludge Information Management System (FSIMS)**
 
-<p align="justify">The FSIMS is a core module supporting Citywide Inclusive Sanitation (CWIS). This application integrates scheduled and on-demand desludging with building, containment, service provider and treatment plant information. The customization adds <b>Scheduled Desludging</b> and <b>Scheduled Desludging Reintegration</b> to the existing application, emptying, sludge collection/disposal and feedback workflow. It does not include a Supervisory Assessment module, role, permission group or service-delivery stage.</p>
+<p align="justify">The FSIMS is a core module supporting Citywide Inclusive Sanitation (CWIS). This application integrates scheduled and on-demand desludging with building, containment, service provider and treatment plant information. Its service chain includes <b>Scheduled Desludging</b>, <b>Scheduled Desludging Reintegration</b>, application registration, <b>Supervisory Assessment</b>, emptying, sludge collection/disposal and feedback. Supervisory assessment is a supported stage after application registration and before emptying.</p>
 
 <p align="justify">The FSIMS is further categorized into five sub-modules:</p> 
 
@@ -185,7 +185,7 @@ The three value-added modules are:
 
 <p align="justify">The information maintained by TPIMS along the information maintained by BIMS and the ESIMS, helps municipal to monitor the CWIS indicators such as (i) FS treatment capacity as a % of total FS generated from non-sewered connections, (ii) FS treatment capacity as a % of volume disposed at the treatment plant, (iii) WW treatment capacity as a % of total WW generated from sewered connections and greywater and supernatant generated from non-sewered connections, and (iv) Effectiveness of FS treatment in meeting prescribed standards for effluent discharge.</p>
 
-<p align="justify">e. Emptying Service Information Management System (ESIMS): ESIMS links each service application directly to emptying, sludge collection/disposal and customer feedback. Scheduled desludging identifies containments due for service, while reintegration allows a customer who previously declined the scheduled service to return to the same application workflow. The following functions operate within FSIMS:</p>
+<p align="justify">e. Emptying Service Information Management System (ESIMS): ESIMS links each service application to supervisory assessment, emptying, sludge collection/disposal and customer feedback. Scheduled desludging identifies containments due for service, while reintegration allows a customer who previously declined the scheduled service to return to the same application workflow. The following functions operate within FSIMS:</p>
 
 - <p align="justify"><b>Scheduled Desludging</b> – An authorized user regenerates the schedule. In one database transaction, IMIS recalculates containment priorities, allocates proposed working dates according to configured capacity, rebuilds a temporary schedule, assigns uncovered wards to eligible providers where necessary and associates each scheduled building with an operational provider covering its ward. Provider-linked users see only their provider's scheduled records.</p>
 
@@ -193,7 +193,9 @@ The three value-added modules are:
 
 - <p align="justify"><b>Application</b> – Scheduled confirmation stores the selected building, containment, road, provider and proposed emptying date on the server and opens the existing application form. Application creation rejects a containment that already has an unfinished application. A successful scheduled or reintegration confirmation marks the containment as confirmed, removes its temporary schedule row and creates the linked application. On-demand requests continue to enter through the existing application workflow.</p>
 
-- <p align="justify"><b>Emptying</b> – The Service Provider Emptying Operator retrieves open applications for the operator's service provider through the protected mobile API and records the service, vehicle, workers, sludge volume, trips, payment and images. Saving an emptying marks the application as emptied and updates the containment's last emptying date, next emptying date and emptied status.</p>
+- <p align="justify"><b>Supervisory Assessment</b> – An authorized user records a field assessment against the application, including site and access details, an appropriate desludging vehicle size, the confirmed emptying date and any advance payment information. The assessment can be entered through the web interface or mobile API. Saving it marks the application's supervisory assessment status as complete; the mobile emptying list requires this status before showing the application for service.</p>
+
+- <p align="justify"><b>Emptying</b> – After supervisory assessment, the Service Provider Emptying Operator retrieves eligible applications for the operator's service provider through the protected mobile API and records the service, vehicle, workers, sludge volume, trips, payment and images. Saving an emptying marks the application as emptied and updates the containment's last emptying date, next emptying date and emptied status.</p>
 
 - <p align="justify"><b>Sludge Collection</b> – The Treatment Plant Admin records the sludge received at the treatment plant, including the linked application, service provider, vehicle, volume, trips and entry/exit details. Saving the record marks the application's sludge collection status as complete.</p>
 
@@ -201,7 +203,7 @@ The three value-added modules are:
 
 - <p align="justify"><b>Help Desks</b> – Municipality and Service Provider Help Desk roles support schedule handling, reintegration, application processing and customer follow-up according to their assigned permissions.</p>
 
-<p align="justify"><b>Reference design compared with the implemented scheduling logic:</b> The supplied DNCC reference material describes selecting eligible on-site containments outside the WASA sewer service and billing population, assigning priority, grouping by provider service area, ordering by distance to a treatment facility and confirming service with the customer. It also includes a supervisory assessment stage and related notifications. This application implements the scheduling and reintegration functions but intentionally omits that assessment stage and its notifications. The source code implements the following verified rules:</p>
+<p align="justify"><b>Reference design compared with the implemented scheduling logic:</b> The supplied DNCC reference material describes selecting eligible on-site containments outside the WASA sewer service and billing population, assigning priority, grouping by provider service area, ordering by distance to a treatment facility and confirming service with the customer. The application also implements supervisory assessment after application registration. The source code implements the following verified rules:</p>
 
 1. <b>Eligibility:</b> Priority recalculation applies to non-deleted containments whose status is unset, active (0) or opted out (4). Automatic date allocation is narrower: the containment must be non-deleted, not previously emptied and have an unset or active status. The temporary display queue uses linked building and containment records with status unset, active (0) or scheduled (3), and excludes any containment with an unfinished application. The temporary queue intentionally does not apply the <code>emptied_status</code> filter used by date allocation. The current queries do not explicitly enforce the WASA sewer-service or sewer-billing exclusions described in the reference design.
 2. <b>Priority assignment:</b> IMIS uses the last valid emptying date first and falls back to a valid containment construction date. Future dates are ignored. No usable date or a date older than three years receives priority 1; a date from exactly three years ago up to but not including one year ago receives priority 2; and a date from exactly one year ago through today receives priority 3.
@@ -210,7 +212,7 @@ The three value-added modules are:
 5. <b>Service-area grouping:</b> Existing service areas are preserved. Municipality wards not covered by any operational provider may be distributed randomly and evenly only among operational providers that have no service area. Each temporary schedule row is then assigned to the first active provider, by provider ID, whose service-area CSV or service-provider ward mapping contains the building ward. Rows without a matching provider remain unassigned.
 6. <b>Customer confirmation:</b> The Service Provider Admin or an authorized Help Desk user contacts the citizen. Accepting a scheduled record opens the application form with the schedule selection; declining it sets containment status 4 and removes the temporary row. Application creation checks for an unfinished application, then marks a confirmed containment with status 1 and removes the temporary schedule record.
 7. <b>Reintegration:</b> Reintegration lists status-4 containments. Municipality-wide administrative/help-desk users can view all providers, while provider-linked users are limited to wards covered by their provider. Confirming reintegration resolves the active provider for the current building ward and returns the record to the same application path. If no active provider covers the ward, confirmation stops with an error.
-8. <b>Downstream service tracking:</b> The application remains the common record linking emptying, sludge collection and feedback. The implementation has no separate supervisory assessment entity, controller, role, permission group, status transition or notification stage.
+8. <b>Downstream service tracking:</b> The application links supervisory assessment, emptying, sludge collection and feedback. A separate supervisory assessment record and controller maintain the field details. Saving an assessment sets the application's <code>supervisory_assessment_status</code> to true; the mobile emptying list filters for assessed applications. The permission catalogue includes a Supervisory Assessment group and an API access permission, and the web assessment flow creates notifications for users linked to the assigned service provider.
 <p align="justify">Data maintained by FSIMS along with the building data and LIC data enables CWIS Information Management System to generate CWIS indicators such as (i) IHHL onsite sanitation system that have been desludged, (ii) Collected FS disposed at the treatment plant or designated disposal site, (iii) Low income onsite sanitation systems that have been desludged, (iv) FS collected from LIC that is disposed at treatment plant or designated area, (v) Educational institutions where FS generated is safely transported to TP or safely disposed in situ, (vi) Healthcare facilities where FS generated is safely transported to TP or safely disposed in situ, and (vii) Desludging services completed mechanically or semi-mechanically.</p>
 
 <p align="justify">The data export tools under FSIMS allow users to export data in CSV, Shape and KML format where applicable.</p>
@@ -320,7 +322,7 @@ Map Feature:
 
 ## 3.2 <a name="_toc189741405"></a>**Roles and Permissions**
 
-   <a name="_hlk189691742"></a> <p align="justify">IMIS uses predefined roles and Spatie permissions to control access to modules, records and actions. The roles can be maintained through Settings, but the responsibilities below reflect the roles and permissions seeded by this application. The role seeder defines 18 distinct role names, including the platform-level Super Admin. No Supervisory Assessment role or permission group is defined.</p>
+   <a name="_hlk189691742"></a> <p align="justify">IMIS uses predefined roles and Spatie permissions to control access to modules, records and actions. The roles can be maintained through Settings, but the responsibilities below reflect the roles and permissions defined by this application. The role seeder defines 19 distinct role names, including the platform-level Super Admin and Municipality - Supervisory Assessment. The permission catalogue includes a Supervisory Assessment group and an API access permission.</p>
 
 1. Municipality
    -  Municipality - Super Admin
@@ -334,7 +336,8 @@ Map Feature:
    -  Municipality - Sanitation Department
    -  Municipality - IT Admin
    -  Municipality - Public Health Department
-   -  Municipality - Help Desk
+    -  Municipality - Help Desk
+   -  Municipality - Supervisory Assessment
 1. Service Provider
    -  Service Provider - Admin
    -  Service Provider - Emptying Operator
@@ -354,7 +357,8 @@ Map Feature:
 - <b>Service Provider - Admin:</b> Receives the complete Schedule Desludging and Schedule Reintegration permission groups. The role can list, regenerate, confirm or remove scheduled records through the implemented schedule controller and can confirm opted-out records through reintegration. Schedule data is restricted to the user's <code>service_provider_id</code>. The seeder also grants management access for provider help desks, vehicles, employees and users, while application/emptying access is primarily view, list and export and sludge-collection/feedback access is view and list.
 - <b>Service Provider - Help Desk:</b> Receives the complete Schedule Desludging and Schedule Reintegration permission groups, application and feedback permissions except history, and view/list/export access to emptying and sludge collection. This role can support customer confirmation, application processing, reintegration and feedback follow-up for the provider.
 - <b>Municipality - Help Desk:</b> Receives the complete Schedule Desludging and Schedule Reintegration permission groups, application and feedback permissions except history, and view/list/export access to emptying, sludge collection and service-provider records. The reintegration controller allows this role to view records across providers.
-- <b>Service Provider - Emptying Operator:</b> Receives <code>Access Emptying Service API</code>. Through the authenticated mobile API, the operator retrieves open applications limited to the operator's service provider, selects the provider's vehicles and workers, and submits emptying details. The API updates the linked application and containment when the service is saved.
+- <b>Service Provider - Emptying Operator:</b> With the required API access permission, the operator retrieves assessed applications limited to the operator's service provider, selects the provider's vehicles and workers, and submits emptying details through the authenticated mobile API. The API updates the linked application and containment when the service is saved.
+- <b>Municipality - Supervisory Assessment:</b> The role is defined for field assessment work. Its dedicated permission seeder grants supervisory assessment management and API access, along with read access to related service records when run. This dedicated seeder is currently commented out in <code>RolesSeeder</code>, so installations must assign the permissions before using the role.
 - <b>Treatment Plant - Admin:</b> Receives sludge-collection permissions except history, along with treatment-plant and treatment-efficiency access. The sludge-collection controller limits this role's list to its assigned treatment plant. The role records received sludge and completes the sludge-collection status for the linked application.
 - <b>Municipality - Sanitation Department:</b> Receives list access to Schedule Reintegration, operational view/list/export permissions for applications, emptying, sludge collection and feedback, treatment-plant functions, dashboards, KPI/CWIS functions and related reporting. The seeder does not grant this role schedule regeneration or confirmation.
 - <b>Municipality - Super Admin and Super Admin:</b> Provide broader administrative oversight according to their seeded permissions. The reintegration controller treats these roles as municipality-wide viewers.
@@ -365,7 +369,7 @@ Map Feature:
 For the Base IMIS role framework, refer to the [Roles & Permission Matrix](https://github.com/base-imis/web_app/blob/master/documentations/code_documents/18%20-%20Roles%20%26%20Permission%20Matrix.md). Application-specific assignments are defined in the local role and permission seeders and may be customized through Settings.
 ## 3.3 <a name="_toc189741406"></a>**IMIS Driven Sanitation Service Delivery Chain**
 
-<p align="justify">The supported IMIS-driven sanitation service chain begins with schedule generation and customer confirmation, continues through application registration and emptying, and finishes with sludge collection/disposal and customer feedback. Scheduled Desludging Reintegration returns a previously opted-out containment to the application path when the customer later agrees. On-demand requests enter through the existing application workflow and then use the same emptying, sludge collection and feedback records. [Figure 3](#figure3) shows the reference service workflow. Its supervisory assessment stage and notifications are not implemented in this application; the implemented process is described below.</p>
+<p align="justify">The supported IMIS-driven sanitation service chain begins with schedule generation and customer confirmation, continues through application registration, supervisory assessment and emptying, and finishes with sludge collection/disposal and customer feedback. Scheduled Desludging Reintegration returns a previously opted-out containment to the application path when the customer later agrees. On-demand requests enter through the existing application workflow and then use the same supervisory assessment, emptying, sludge collection and feedback records. [Figure 3](#figure3) shows the service workflow, including supervisory assessment before emptying.</p>
 
 <p align="center">
     <img src="assets/imis-sanitation-service-workflow.png" alt="IMIS service workflow connecting Citizen, Service Provider Admin, Emptying Operator, DWASA FSTP Operator and IMIS">
@@ -373,7 +377,7 @@ For the Base IMIS role framework, refer to the [Roles & Permission Matrix](https
 
 <p align="center">
     <a id="figure3"></a>
-    <em>Figure 3 Reference IMIS sanitation service workflow</em>
+    <em>Figure 3 IMIS sanitation service workflow with supervisory assessment</em>
 </p>
 
 ## 3.3.1 <a name="_toc189741407"></a>**Entities in IMIS-driven sanitation service delivery model** 
@@ -388,11 +392,11 @@ For the Base IMIS role framework, refer to the [Roles & Permission Matrix](https
 
 4. <p align="justify"><b>Treatment Plant Admin</b> – Receives the transported sludge and records the linked application, vehicle, service provider, volume, trip count, treatment plant and entry/exit details. Access is scoped to the user's assigned treatment plant when listing records.</p>
 
-5. <p align="justify"><b>IMIS</b> – Connects building, containment, schedule, application, emptying, sludge collection and feedback records. It enforces the implemented permission checks, provider and treatment-plant scoping, duplicate open-application check and workflow status updates used for monitoring and reporting.</p>
+5. <p align="justify"><b>IMIS</b> – Connects building, containment, schedule, application, supervisory assessment, emptying, sludge collection and feedback records. It enforces the implemented permission checks, provider and treatment-plant scoping, duplicate open-application check and workflow status updates used for monitoring and reporting.</p>
 
 ## 3.3.2 <a name="_toc189741408"></a>**Processes in IMIS-driven sanitation service delivery model**
 
-<p align="justify">The A–G process groups describe the workflow implemented by this application. Step numbers in the reference diagram do not correspond directly to these processes.</p>
+<p align="justify">The A–G process groups describe the workflow implemented by this application. Figure 3 also shows the supervisory assessment stage between application registration and emptying.</p>
 
 ### A. **Process Application**
 
@@ -400,9 +404,11 @@ For the Base IMIS role framework, refer to the [Roles & Permission Matrix](https
 
 <p align="justify"><b>A2. Lodge the application</b> – Accepting a scheduled or reintegration record opens the existing application form with the selected building, containment, road, provider and proposed date. IMIS rejects a second unfinished application for the same containment. After successful scheduled confirmation, it marks the containment as confirmed and removes the temporary schedule row. On-demand applications can also be registered through the existing application path.</p>
 
+<p align="justify"><b>A3. Complete supervisory assessment</b> – An authorized assessor records the site assessment against the application, including access conditions, a suitable vehicle size, confirmed emptying date and any advance payment details. Saving the assessment updates the application's supervisory assessment status, allowing it to appear in the mobile emptying list.</p>
+
 ### B. **Process Work Order** 
 
-<p align="justify"><b>B1. Retrieve the assigned application</b> – The Service Provider Emptying Operator signs in through the protected mobile API and retrieves open applications. IMIS limits an Emptying Operator to applications assigned to the operator's service provider.</p>
+<p align="justify"><b>B1. Retrieve the assessed application</b> – The Service Provider Emptying Operator signs in through the protected mobile API and retrieves open applications after supervisory assessment. IMIS limits an Emptying Operator to applications assigned to the operator's service provider.</p>
 
 <p align="justify"><b>B2. Provide emptying and update the record</b> – The operator performs the service and records the linked application, vehicle, driver/emptiers, treatment plant, sludge volume, trips, payment information and required images. Saving the emptying sets the application's emptying status to complete and updates the containment's last and next emptying dates and emptied status.</p>
 
